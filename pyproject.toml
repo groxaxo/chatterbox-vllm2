@@ -29,6 +29,9 @@ dependencies = [
     "gradio",
     "spacy-pkuseg",
     "pykakasi",
+    "fastapi",
+    "uvicorn[standard]",
+    "python-multipart",
 ]
 
 [project.optional-dependencies]
