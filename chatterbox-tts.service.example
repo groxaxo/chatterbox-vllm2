@@ -1,0 +1,37 @@
+# Systemd service file for Chatterbox TTS API Server
+# 
+# Installation:
+# 1. Copy this file to /etc/systemd/system/chatterbox-tts.service
+# 2. Update paths and user in the file
+# 3. Reload systemd: sudo systemctl daemon-reload
+# 4. Enable service: sudo systemctl enable chatterbox-tts
+# 5. Start service: sudo systemctl start chatterbox-tts
+# 6. Check status: sudo systemctl status chatterbox-tts
+
+[Unit]
+Description=Chatterbox TTS API Server
+After=network.target
+
+[Service]
+Type=simple
+User=YOUR_USERNAME
+Group=YOUR_USERNAME
+WorkingDirectory=/path/to/chatterbox-vllm2
+Environment="CHATTERBOX_MODEL=multilingual"
+Environment="CHATTERBOX_MAX_BATCH_SIZE=1"
+Environment="CHATTERBOX_MAX_MODEL_LEN=800"
+Environment="CHATTERBOX_HOST=0.0.0.0"
+Environment="CHATTERBOX_PORT=8000"
+ExecStart=/path/to/chatterbox-vllm2/.venv/bin/python /path/to/chatterbox-vllm2/api_server.py
+
+# Restart on failure
+Restart=on-failure
+RestartSec=10s
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=chatterbox-tts
+
+[Install]
+WantedBy=multi-user.target

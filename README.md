@@ -35,12 +35,14 @@ DISCLAIMER: THIS IS A PERSONAL PROJECT and is not affiliated with my employer or
   * Due to a vLLM limitation, CFG can not be tuned on a per-request basis and can only be configured via the `CHATTERBOX_CFG_SCALE` environment variable.
 * ✅ Exaggeration control is implemented.
 * ✅ vLLM batching is implemented and produces a significant speedup.
+* ✅ **OpenAI-compatible API server** for seamless integration with Open WebUI and other TTS clients.
+* ✅ **Optimized for low VRAM GPUs** - Runs on GPUs with as little as 8GB VRAM (e.g., RTX 3060).
+* ✅ **Full multilingual support** - 23 languages supported with proper language detection and voice selection.
 * ℹ️ Project uses vLLM internal APIs and extremely hacky workarounds to get things done.
   * Refactoring to the idiomatic vLLM way of doing things is WIP, but will require some changes to vLLM.
   * Until then, this is a Rube Goldberg machine that will likely only work with vLLM 0.9.2.
   * Follow https://github.com/vllm-project/vllm/issues/21989 for updates.
 * ℹ️ Substantial refactoring is needed to further clean up unnecessary workarounds and code paths.
-* ℹ️ Server API is not implemented and will likely be out-of-scope for this project.
 * ❌ Learned speech positional embeddings are not applied, pending support in vLLM. However, this doesn't seem to be causing a very noticeable degradation in quality.
 * ❌ APIs are not yet stable and may change.
 * ❌ Benchmarks and performance optimizations are not yet implemented.
@@ -106,6 +108,69 @@ An early version of Multilingual support is available (see [this example](https:
 * Russian text stress is not yet implemented.
 
 For the list of supported languages, see [here](https://github.com/resemble-ai/chatterbox?tab=readme-ov-file#supported-languages).
+
+# API Server (OpenAI-compatible)
+
+An OpenAI-compatible TTS API server is now available, making it easy to integrate with Open WebUI and other applications that support the OpenAI TTS API.
+
+## Quick Start
+
+### For Low VRAM GPUs (RTX 3060 / 8GB)
+
+The API server is optimized for GPUs with as little as 8GB VRAM:
+
+```bash
+# Start with multilingual support
+CHATTERBOX_MODEL=multilingual python api_server.py
+
+# Or use the English-only model for even lower VRAM usage
+CHATTERBOX_MODEL=english python api_server.py
+```
+
+The server will start on `http://localhost:8000` with memory-optimized settings.
+
+### Test the API
+
+```bash
+# Test with curl
+curl -X POST http://localhost:8000/v1/audio/speech \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "tts-1",
+    "input": "Hello! This is a test.",
+    "voice": "alloy"
+  }' \
+  --output speech.mp3
+
+# Or run the test suite
+python test_api.py
+```
+
+## Features
+
+- ✅ **OpenAI-compatible endpoints** - Drop-in replacement for OpenAI TTS API
+- ✅ **Open WebUI integration** - Works seamlessly with Open WebUI
+- ✅ **Multilingual support** - 23 languages (Arabic, Chinese, French, German, Spanish, Japanese, and more)
+- ✅ **Multiple audio formats** - MP3, WAV, FLAC, Opus, AAC, PCM
+- ✅ **Voice selection** - Compatible with OpenAI voice names (alloy, echo, fable, onyx, nova, shimmer)
+- ✅ **Language-specific voices** - Use language codes as voice names (e.g., `voice: "fr"` for French)
+- ✅ **Low VRAM optimization** - Runs efficiently on 8GB GPUs
+
+## Open WebUI Integration
+
+1. Start the API server:
+   ```bash
+   CHATTERBOX_MODEL=multilingual python api_server.py
+   ```
+
+2. In Open WebUI, configure TTS settings:
+   - **TTS Engine**: OpenAI
+   - **API Base URL**: `http://localhost:8000/v1`
+   - **API Key**: (any value or leave empty)
+   - **Model**: `tts-1`
+   - **Voice**: Choose from standard voices or use language codes
+
+For detailed API documentation and configuration options, see [API_USAGE.md](API_USAGE.md).
 
 # Benchmarks
 
