@@ -7,6 +7,17 @@ This is a port of https://github.com/resemble-ai/chatterbox to vLLM. Why?
   * More rigorous benchmarking is WIP, but will likely come after batching is fully fleshed out.
 * Easier integration with state-of-the-art inference infrastructure.
 
+## 🎉 New: OpenAI-Compatible API & Low VRAM Support
+
+This fork adds:
+- ✅ **OpenAI-compatible API** - Works seamlessly with Open WebUI and other OpenAI TTS clients
+- ✅ **Low VRAM optimization** - Runs on GPUs with as little as 8GB VRAM (RTX 3060, RTX 2070, etc.)
+- ✅ **Full multilingual support** - 23 languages with proper language detection
+- ✅ **Production-ready** - Docker, Docker Compose, systemd service templates included
+
+👉 **Quick Start**: See [QUICKSTART.md](QUICKSTART.md) for setup on low VRAM GPUs  
+👉 **API Docs**: See [API_USAGE.md](API_USAGE.md) for complete API reference
+
 DISCLAIMER: THIS IS A PERSONAL PROJECT and is not affiliated with my employer or any other corporate entity in any way. The project is based solely on publicly-available information. All opinions are my own and do not necessarily represent the views of my employer.
 
 ## Generation Samples
