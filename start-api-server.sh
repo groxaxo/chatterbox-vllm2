@@ -1,6 +1,10 @@
 #!/bin/bash
-# Start script for Chatterbox TTS API Server
+# Chatterbox TTS on vLLM - API Server Start Script
+#
 # This script provides easy configuration presets for different GPU configurations
+# 
+# Based on Chatterbox TTS (Resemble AI) and the vLLM port by randombk
+# Enhanced with OpenAI-compatible API and low VRAM optimizations
 
 set -e
 
