@@ -1,0 +1,58 @@
+version: '3.8'
+
+services:
+  chatterbox-tts-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: chatterbox-tts-api:latest
+    container_name: chatterbox-tts
+    ports:
+      - "8000:8000"
+    environment:
+      # Model configuration
+      - CHATTERBOX_MODEL=multilingual  # Options: english, multilingual
+      - CHATTERBOX_MAX_BATCH_SIZE=1    # Keep at 1 for low VRAM GPUs
+      - CHATTERBOX_MAX_MODEL_LEN=800   # Reduce for lower VRAM usage
+      
+      # Server configuration
+      - CHATTERBOX_HOST=0.0.0.0
+      - CHATTERBOX_PORT=8000
+      
+      # Optional: CFG scale
+      # - CHATTERBOX_CFG_SCALE=0.5
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    restart: unless-stopped
+    volumes:
+      # Optional: Mount local cache for model weights
+      - ~/.cache/huggingface:/root/.cache/huggingface
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # Optional: Add Open WebUI service
+  # open-webui:
+  #   image: ghcr.io/open-webui/open-webui:main
+  #   container_name: open-webui
+  #   ports:
+  #     - "3000:8080"
+  #   environment:
+  #     - OPENAI_API_BASE_URL=http://chatterbox-tts-api:8000/v1
+  #     - OPENAI_API_KEY=not-needed
+  #   volumes:
+  #     - open-webui:/app/backend/data
+  #   restart: unless-stopped
+  #   depends_on:
+  #     - chatterbox-tts-api
+
+volumes:
+  open-webui:
