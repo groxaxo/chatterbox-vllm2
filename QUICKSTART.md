@@ -1,6 +1,16 @@
-# Quick Start Guide - Chatterbox TTS API for Low VRAM GPUs
+# Quick Start Guide - Chatterbox TTS on vLLM
 
-This guide will help you get the Chatterbox TTS API server running on your RTX 3060 (8GB VRAM) or similar GPU.
+**Get the Chatterbox TTS API server running on your GPU in minutes!**
+
+This guide helps you set up an OpenAI-compatible TTS API optimized for GPUs with as little as 8GB VRAM.
+
+## About This Project
+
+This is a community-enhanced fork that builds upon:
+- **[Resemble AI's Chatterbox](https://github.com/resemble-ai/chatterbox)** - The original high-quality TTS model
+- **[randombk's vLLM port](https://github.com/randombk/chatterbox-vllm)** - High-performance vLLM implementation
+
+Our additions: OpenAI-compatible API, low VRAM optimization, enhanced multilingual support, and production-ready deployment tools.
 
 ## Prerequisites
 
