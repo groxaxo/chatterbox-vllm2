@@ -10,6 +10,7 @@ OpenAI-compatible TTS API server for Chatterbox TTS on vLLM, optimized for GPUs 
 
 - ✅ **OpenAI-compatible API** - Drop-in replacement for OpenAI TTS API
 - ✅ **Open WebUI compatible** - Works seamlessly with Open WebUI
+- ✅ **Ultra-Low VRAM support** - Runs on GPUs with 4-6GB VRAM using quantization (RTX 2060, GTX 1660 Ti)
 - ✅ **Low VRAM optimization** - Runs on GPUs with as little as 8GB VRAM (e.g., RTX 3060)
 - ✅ **Multilingual support** - 23 languages supported
 - ✅ **Multiple voice options** - Compatible with OpenAI voice names
@@ -75,6 +76,39 @@ curl -X POST http://localhost:8000/v1/audio/speech \
 | `CHATTERBOX_MAX_BATCH_SIZE` | `1` | Maximum batch size (keep at 1 for low VRAM) |
 | `CHATTERBOX_MAX_MODEL_LEN` | `800` | Maximum model length in tokens |
 | `CHATTERBOX_CFG_SCALE` | - | CFG scale (if supported) |
+| `CHATTERBOX_USE_QUANTIZATION` | `false` | Enable quantization for ultra-low VRAM |
+| `CHATTERBOX_QUANTIZATION_METHOD` | `bnb-4bit` | Quantization method: `bnb-4bit`, `bnb-8bit`, or `awq` |
+| `CHATTERBOX_QUANTIZE_S3GEN` | `true` | Quantize S3Gen model (when quantization is enabled) |
+| `CHATTERBOX_QUANTIZE_VOICE_ENCODER` | `true` | Quantize Voice Encoder (when quantization is enabled) |
+
+### Ultra-Low VRAM Configuration (RTX 2060 / 4-6GB)
+
+For GPUs with 4-6GB VRAM, use quantization:
+
+```bash
+export CHATTERBOX_MODEL=multilingual
+export CHATTERBOX_MAX_BATCH_SIZE=1
+export CHATTERBOX_MAX_MODEL_LEN=600
+export CHATTERBOX_USE_QUANTIZATION=true
+export CHATTERBOX_QUANTIZATION_METHOD=bnb-4bit
+export CHATTERBOX_QUANTIZE_S3GEN=true
+export CHATTERBOX_QUANTIZE_VOICE_ENCODER=true
+python api_server.py
+```
+
+Or use the convenience script:
+```bash
+./start-api-server.sh --ultra-low-vram
+```
+
+**Requirements:** Install `bitsandbytes` for quantization:
+```bash
+pip install bitsandbytes
+# or
+uv pip install ".[ultra-low-vram]"
+```
+
+These settings should keep GPU memory usage under 5-6GB using 4-bit quantization.
 
 ### Low VRAM Configuration (RTX 3060 / 8GB)
 
@@ -87,7 +121,12 @@ export CHATTERBOX_MAX_MODEL_LEN=800
 python api_server.py
 ```
 
-These settings should keep GPU memory usage under 7GB, leaving headroom for system processes.
+Or use the convenience script:
+```bash
+./start-api-server.sh --low-vram
+```
+
+These settings should keep GPU memory usage under 7-8GB, leaving headroom for system processes.
 
 ### Higher VRAM Configuration (RTX 3090 / 24GB)
 
@@ -98,6 +137,11 @@ export CHATTERBOX_MODEL=multilingual
 export CHATTERBOX_MAX_BATCH_SIZE=3
 export CHATTERBOX_MAX_MODEL_LEN=1000
 python api_server.py
+```
+
+Or use the convenience script:
+```bash
+./start-api-server.sh --high-vram
 ```
 
 ## API Endpoints
