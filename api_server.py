@@ -97,21 +97,36 @@ async def lifespan(app: FastAPI):
     max_batch_size = int(os.environ.get("CHATTERBOX_MAX_BATCH_SIZE", "1"))
     max_model_len = int(os.environ.get("CHATTERBOX_MAX_MODEL_LEN", "800"))
     
+    # Ultra-low VRAM quantization settings (for GPUs with 4-6GB like RTX 2060, GTX 1660 Ti)
+    use_quantization = os.environ.get("CHATTERBOX_USE_QUANTIZATION", "false").lower() == "true"
+    quantization_method = os.environ.get("CHATTERBOX_QUANTIZATION_METHOD", "bnb-4bit")  # bnb-4bit, bnb-8bit, awq
+    quantize_s3gen = os.environ.get("CHATTERBOX_QUANTIZE_S3GEN", "true").lower() == "true"
+    quantize_voice_encoder = os.environ.get("CHATTERBOX_QUANTIZE_VOICE_ENCODER", "true").lower() == "true"
+    
     print(f"Loading {model_variant} model with max_batch_size={max_batch_size}, max_model_len={max_model_len}")
-    print(f"[INFO] Configuration optimized for GPUs with <10GB VRAM")
+    
+    if use_quantization:
+        print(f"[INFO] Ultra-low VRAM mode enabled with {quantization_method} quantization")
+        print(f"[INFO] Configuration optimized for GPUs with 4-6GB VRAM (RTX 2060, GTX 1660 Ti)")
+        print(f"[INFO] Quantization settings: s3gen={quantize_s3gen}, voice_encoder={quantize_voice_encoder}")
+    else:
+        print(f"[INFO] Configuration optimized for GPUs with <10GB VRAM")
+    
+    model_kwargs = {
+        "max_batch_size": max_batch_size,
+        "max_model_len": max_model_len,
+        "use_quantization": use_quantization,
+        "quantization_method": quantization_method,
+        "quantize_s3gen": quantize_s3gen,
+        "quantize_voice_encoder": quantize_voice_encoder,
+    }
     
     if model_variant == "multilingual":
-        model = ChatterboxTTS.from_pretrained_multilingual(
-            max_batch_size=max_batch_size,
-            max_model_len=max_model_len,
-        )
+        model = ChatterboxTTS.from_pretrained_multilingual(**model_kwargs)
         model_type = "multilingual"
         print(f"[INFO] Multilingual model loaded. Supported languages: {', '.join(model.get_supported_languages().keys())}")
     else:
-        model = ChatterboxTTS.from_pretrained(
-            max_batch_size=max_batch_size,
-            max_model_len=max_model_len,
-        )
+        model = ChatterboxTTS.from_pretrained(**model_kwargs)
         model_type = "english"
         print("[INFO] English model loaded")
     

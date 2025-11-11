@@ -92,6 +92,12 @@ class ChatterboxTTS:
 
                    # Original Chatterbox defaults this to False. I don't see a substantial performance difference when running with FP16.
                    s3gen_use_fp16: bool = False,
+                   
+                   # Ultra-low VRAM quantization options
+                   use_quantization: bool = False,
+                   quantization_method: str = None,  # 'bnb-4bit', 'bnb-8bit', 'awq', or None
+                   quantize_s3gen: bool = False,
+                   quantize_voice_encoder: bool = False,
                    **kwargs) -> 'ChatterboxTTS':
         ckpt_dir = Path(ckpt_dir)
 
@@ -103,6 +109,19 @@ class ChatterboxTTS:
         t3_enc = T3CondEnc(t3_config)
         t3_enc.load_state_dict({ k.replace('cond_enc.', ''):v for k,v in t3_weights.items() if k.startswith('cond_enc.') })
         t3_enc = t3_enc.to(device=target_device).eval()
+        
+        # Apply BnB quantization to T3 conditional encoder if requested
+        if use_quantization and quantization_method and 'bnb' in quantization_method.lower():
+            try:
+                from .quantization import apply_bnb_quantization
+                quantization_config = {
+                    "load_in_4bit": "4bit" in quantization_method.lower(),
+                    "load_in_8bit": "8bit" in quantization_method.lower(),
+                }
+                t3_enc = apply_bnb_quantization(t3_enc, quantization_config)
+                print(f"[QUANTIZATION] Applied {quantization_method} to T3 conditional encoder")
+            except Exception as e:
+                print(f"[WARNING] Failed to quantize T3 encoder: {e}")
 
         t3_speech_emb = torch.nn.Embedding(t3_config.speech_tokens_dict_size, t3_config.n_channels)
         t3_speech_emb.load_state_dict({ k.replace('speech_emb.', ''):v for k,v in t3_weights.items() if k.startswith('speech_emb.') })
@@ -132,16 +151,53 @@ class ChatterboxTTS:
             "enforce_eager": not compile,
             "max_model_len": max_model_len,
         }
+        
+        # Add quantization config for vLLM if using AWQ or other vLLM-supported methods
+        if use_quantization and quantization_method:
+            if quantization_method.lower() == 'awq':
+                try:
+                    from .quantization import get_vllm_quantization_config
+                    vllm_quant_config = get_vllm_quantization_config('awq')
+                    base_vllm_kwargs.update(vllm_quant_config)
+                    print(f"[QUANTIZATION] Using AWQ quantization for T3 model via vLLM")
+                except Exception as e:
+                    print(f"[WARNING] Failed to configure AWQ quantization: {e}")
 
         t3 = LLM(**{**base_vllm_kwargs, **kwargs})
 
         ve = VoiceEncoder()
         ve.load_state_dict(load_file(ckpt_dir / "ve.safetensors"))
         ve = ve.to(device=target_device).eval()
+        
+        # Apply BnB quantization to Voice Encoder if requested
+        if use_quantization and quantize_voice_encoder and quantization_method and 'bnb' in quantization_method.lower():
+            try:
+                from .quantization import apply_bnb_quantization
+                quantization_config = {
+                    "load_in_4bit": "4bit" in quantization_method.lower(),
+                    "load_in_8bit": "8bit" in quantization_method.lower(),
+                }
+                ve = apply_bnb_quantization(ve, quantization_config)
+                print(f"[QUANTIZATION] Applied {quantization_method} to Voice Encoder")
+            except Exception as e:
+                print(f"[WARNING] Failed to quantize Voice Encoder: {e}")
 
         s3gen = S3Gen(use_fp16=s3gen_use_fp16)
         s3gen.load_state_dict(load_file(ckpt_dir / "s3gen.safetensors"), strict=False)
         s3gen = s3gen.to(device=target_device).eval()
+        
+        # Apply BnB quantization to S3Gen if requested
+        if use_quantization and quantize_s3gen and quantization_method and 'bnb' in quantization_method.lower():
+            try:
+                from .quantization import apply_bnb_quantization
+                quantization_config = {
+                    "load_in_4bit": "4bit" in quantization_method.lower(),
+                    "load_in_8bit": "8bit" in quantization_method.lower(),
+                }
+                s3gen = apply_bnb_quantization(s3gen, quantization_config)
+                print(f"[QUANTIZATION] Applied {quantization_method} to S3Gen")
+            except Exception as e:
+                print(f"[WARNING] Failed to quantize S3Gen: {e}")
 
         default_conds = Conditionals.load(ckpt_dir / "conds.pt")
         default_conds.to(device=target_device)

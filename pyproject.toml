@@ -37,6 +37,7 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["build", "twine"]
+ultra-low-vram = ["bitsandbytes>=0.41.0", "autoawq>=0.2.0"]
 
 [tool.setuptools.dynamic]
 version = { file = ".latest-version.generated.txt" }
