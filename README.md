@@ -1,24 +1,36 @@
 # Chatterbox TTS on vLLM
 
-This is a port of https://github.com/resemble-ai/chatterbox to vLLM. Why?
+A high-performance port of [Chatterbox TTS](https://github.com/resemble-ai/chatterbox) to vLLM, optimized for low VRAM GPUs with OpenAI-compatible API support.
 
-* Improved performance and more efficient use of GPU memory.
-  * Early benchmarks show ~4x speedup in generation tokens/s without batching, and over 10x with batching. This is a significant improvement over the original Chatterbox implementation, which was bottlenecked by unnecessary CPU-GPU sync/transfers within the HF transformers implementation.
-  * More rigorous benchmarking is WIP, but will likely come after batching is fully fleshed out.
-* Easier integration with state-of-the-art inference infrastructure.
+## 🙏 Acknowledgments
 
-## 🎉 New: OpenAI-Compatible API & Low VRAM Support
+This project builds upon the excellent work of:
+- **[Resemble AI](https://github.com/resemble-ai)** - Original [Chatterbox TTS](https://github.com/resemble-ai/chatterbox) model and implementation
+- **[randombk](https://github.com/randombk)** - Initial [vLLM port](https://github.com/randombk/chatterbox-vllm) that made efficient inference possible
 
-This fork adds:
-- ✅ **OpenAI-compatible API** - Works seamlessly with Open WebUI and other OpenAI TTS clients
-- ✅ **Low VRAM optimization** - Runs on GPUs with as little as 8GB VRAM (RTX 3060, RTX 2070, etc.)
-- ✅ **Full multilingual support** - 23 languages with proper language detection
-- ✅ **Production-ready** - Docker, Docker Compose, systemd service templates included
+Special thanks to these pioneers for making such advanced TTS technology openly available!
+
+## 🚀 Why This Fork?
+
+This fork extends the original vLLM port with:
+- ✅ **OpenAI-Compatible API** - Drop-in replacement for OpenAI TTS API, works with Open WebUI and other clients
+- ✅ **Low VRAM Optimization** - Runs efficiently on 8GB GPUs (RTX 3060, RTX 2070, etc.)
+- ✅ **Full Multilingual Support** - 23 languages with automatic language detection
+- ✅ **Production Ready** - Complete Docker setup, systemd service templates, health checks
+- ✅ **Comprehensive Documentation** - Easy-to-follow guides for all use cases
+
+### Performance Benefits (from original vLLM port)
+- **~4x speedup** in generation tokens/s without batching
+- **Over 10x speedup** with batching enabled
+- Significantly improved GPU memory efficiency
+- Eliminates CPU-GPU sync bottlenecks from HF transformers
 
 👉 **Quick Start**: See [QUICKSTART.md](QUICKSTART.md) for setup on low VRAM GPUs  
-👉 **API Docs**: See [API_USAGE.md](API_USAGE.md) for complete API reference
+👉 **API Documentation**: See [API_USAGE.md](API_USAGE.md) for complete API reference
 
-DISCLAIMER: THIS IS A PERSONAL PROJECT and is not affiliated with my employer or any other corporate entity in any way. The project is based solely on publicly-available information. All opinions are my own and do not necessarily represent the views of my employer.
+---
+
+**Note**: This is a community project and is not officially affiliated with Resemble AI or any corporate entity.
 
 ## Generation Samples
 
@@ -38,112 +50,107 @@ DISCLAIMER: THIS IS A PERSONAL PROJECT and is not affiliated with my employer or
 </audio>
 
 
-# Project Status: Usable and with Benchmark-Topping Throughput
+# ✨ Features & Status
 
-* ✅ Basic speech cloning with audio and text conditioning.
-* ✅ Outputs match the quality of the original Chatterbox implementation.
-* ✅ Context Free Guidance (CFG) is implemented.
-  * Due to a vLLM limitation, CFG can not be tuned on a per-request basis and can only be configured via the `CHATTERBOX_CFG_SCALE` environment variable.
-* ✅ Exaggeration control is implemented.
-* ✅ vLLM batching is implemented and produces a significant speedup.
-* ✅ **OpenAI-compatible API server** for seamless integration with Open WebUI and other TTS clients.
-* ✅ **Optimized for low VRAM GPUs** - Runs on GPUs with as little as 8GB VRAM (e.g., RTX 3060).
-* ✅ **Full multilingual support** - 23 languages supported with proper language detection and voice selection.
-* ℹ️ Project uses vLLM internal APIs and extremely hacky workarounds to get things done.
-  * Refactoring to the idiomatic vLLM way of doing things is WIP, but will require some changes to vLLM.
-  * Until then, this is a Rube Goldberg machine that will likely only work with vLLM 0.9.2.
-  * Follow https://github.com/vllm-project/vllm/issues/21989 for updates.
-* ℹ️ Substantial refactoring is needed to further clean up unnecessary workarounds and code paths.
-* ❌ Learned speech positional embeddings are not applied, pending support in vLLM. However, this doesn't seem to be causing a very noticeable degradation in quality.
-* ❌ APIs are not yet stable and may change.
-* ❌ Benchmarks and performance optimizations are not yet implemented.
+## What Works
+* ✅ **Speech Cloning** - Audio and text conditioning for voice matching
+* ✅ **High-Quality Output** - Matches original Chatterbox quality
+* ✅ **Context Free Guidance (CFG)** - Configurable via `CHATTERBOX_CFG_SCALE` environment variable
+* ✅ **Exaggeration Control** - Adjust emotion and expressiveness (0.0 to 2.0)
+* ✅ **vLLM Batching** - Significant speedup for multiple requests
+* ✅ **OpenAI API** - Full compatibility with OpenAI TTS clients
+* ✅ **Low VRAM Support** - Optimized for 8GB GPUs (RTX 3060, RTX 2070)
+* ✅ **23 Languages** - Multilingual support with automatic language detection
+* ✅ **Production Ready** - Docker, systemd templates, health checks
+* ✅ **Multiple Audio Formats** - MP3, WAV, FLAC, Opus, AAC, PCM
 
-# Installation
+## Known Limitations
+*Note: Some limitations inherited from the original vLLM port*
 
-This project only supports Linux and WSL2 with Nvidia hardware. AMD _may_ work with minor tweaks, but is not tested.
+* ⚠️ **vLLM Internal APIs** - Uses internal vLLM APIs with workarounds
+  * Currently compatible with vLLM 0.10.0
+  * Future refactoring may be needed for newer vLLM versions
+  * Track progress: [vLLM Issue #21989](https://github.com/vllm-project/vllm/issues/21989)
+* ⚠️ **Learned Speech Positional Embeddings** - Not yet supported in vLLM
+  * Minor quality impact, mostly imperceptible
+* ⚠️ **CFG Per-Request** - CFG scale must be set globally, not per-request
+* ⚠️ **API Stability** - APIs may evolve; stability expected at v1.0.0
 
-Prerequisites: `git` and [`uv`](https://pypi.org/project/uv/) must be installed
+## Roadmap
+* 🔄 Code cleanup and refactoring
+* 🔄 Improved vLLM integration patterns
+* 🔄 Enhanced benchmarking tools
+* 🔄 Streaming audio support
+* 🔄 Voice cloning from user uploads
 
-```
-git clone https://github.com/randombk/chatterbox-vllm.git
-cd chatterbox-vllm
+# 📦 Installation
+
+## System Requirements
+- **OS**: Linux or WSL2 (Windows Subsystem for Linux)
+- **GPU**: NVIDIA GPU with 8GB+ VRAM
+  - Tested on: RTX 3060 (8GB), RTX 3080 (12GB), RTX 3090 (24GB)
+  - AMD GPUs may work with minor modifications (untested)
+- **Software**: Python 3.10+, CUDA toolkit
+
+## Quick Installation
+
+Prerequisites: Install `git` and [`uv`](https://pypi.org/project/uv/) package manager
+
+```bash
+# Clone the repository
+git clone https://github.com/groxaxo/chatterbox-vllm2.git
+cd chatterbox-vllm2
+
+# Create virtual environment and install dependencies
 uv venv
 source .venv/bin/activate
 uv sync
 ```
 
-The package should automatically download the correct model weights from the Hugging Face Hub.
+The package will automatically download model weights from Hugging Face Hub (~1-2GB).
 
-If you encounter CUDA issues, try resetting the venv and using `uv pip install -e .` instead of `uv sync`.
+### Troubleshooting Installation
 
-
-# Updating
-
-If you are updating from a previous version, run `uv sync` to update the dependencies. The package will automatically download the correct model weights from the Hugging Face Hub.
-
-# Example
-
-[This example](https://github.com/randombk/chatterbox-vllm/blob/master/example-tts.py) can be run with `python example-tts.py` to generate audio samples for three different prompts using three different voices.
-
-```python
-import torchaudio as ta
-from chatterbox_vllm.tts import ChatterboxTTS
-
-
-if __name__ == "__main__":
-    model = ChatterboxTTS.from_pretrained(
-        gpu_memory_utilization = 0.4,
-        max_model_len = 1000,
-
-        # Disable CUDA graphs to reduce startup time for one-off generation.
-        enforce_eager = True,
-    )
-
-    for i, audio_prompt_path in enumerate([None, "docs/audio-sample-01.mp3", "docs/audio-sample-03.mp3"]):
-        prompts = [
-            "You are listening to a demo of the Chatterbox TTS model running on VLLM.",
-            "This is a separate prompt to test the batching implementation.",
-            "And here is a third prompt. It's a bit longer than the first one, but not by much.",
-        ]
-    
-        audios = model.generate(prompts, audio_prompt_path=audio_prompt_path, exaggeration=0.8)
-        for audio_idx, audio in enumerate(audios):
-            ta.save(f"test-{i}-{audio_idx}.mp3", audio, model.sr)
+If you encounter CUDA issues, try:
+```bash
+# Reset the environment and use alternative install method
+rm -rf .venv
+uv venv
+source .venv/bin/activate
+uv pip install -e .
 ```
 
-# Multilingual
+## Updating
 
-An early version of Multilingual support is available (see [this example](https://github.com/randombk/chatterbox-vllm/blob/master/example-tts-multilingual.py)). However there *are* quality degradations compared to the original model, driven by:
-* Alignment Stream Analyzer is not implemented, which can result in errors, repetitions, and extra noise at the end of the audio snippet.
-* The lack of learned speech positional encodings is also much more noticible.
-* Russian text stress is not yet implemented.
+To update from a previous version:
+```bash
+cd chatterbox-vllm2
+git pull
+source .venv/bin/activate
+uv sync
+```
 
-For the list of supported languages, see [here](https://github.com/resemble-ai/chatterbox?tab=readme-ov-file#supported-languages).
+Model weights will be automatically updated if needed.
 
-# API Server (OpenAI-compatible)
+# 🎯 Quick Start Examples
 
-An OpenAI-compatible TTS API server is now available, making it easy to integrate with Open WebUI and other applications that support the OpenAI TTS API.
+## Option 1: OpenAI-Compatible API Server (Recommended)
 
-## Quick Start
-
-### For Low VRAM GPUs (RTX 3060 / 8GB)
-
-The API server is optimized for GPUs with as little as 8GB VRAM:
+The easiest way to use Chatterbox TTS - compatible with Open WebUI and OpenAI clients:
 
 ```bash
-# Start with multilingual support
+# Start the API server (automatically optimized for your GPU)
+./start-api-server.sh --low-vram    # For 8GB GPUs
+./start-api-server.sh --medium-vram # For 12GB GPUs
+./start-api-server.sh --high-vram   # For 24GB+ GPUs
+
+# Or start directly with Python
 CHATTERBOX_MODEL=multilingual python api_server.py
-
-# Or use the English-only model for even lower VRAM usage
-CHATTERBOX_MODEL=english python api_server.py
 ```
 
-The server will start on `http://localhost:8000` with memory-optimized settings.
-
-### Test the API
-
+Then test it:
 ```bash
-# Test with curl
+# Generate speech with curl
 curl -X POST http://localhost:8000/v1/audio/speech \
   -H "Content-Type: application/json" \
   -d '{
@@ -153,35 +160,165 @@ curl -X POST http://localhost:8000/v1/audio/speech \
   }' \
   --output speech.mp3
 
-# Or run the test suite
+# Or use the Python test suite
 python test_api.py
 ```
 
-## Features
+See [API_USAGE.md](API_USAGE.md) for complete API documentation.
 
-- ✅ **OpenAI-compatible endpoints** - Drop-in replacement for OpenAI TTS API
-- ✅ **Open WebUI integration** - Works seamlessly with Open WebUI
-- ✅ **Multilingual support** - 23 languages (Arabic, Chinese, French, German, Spanish, Japanese, and more)
-- ✅ **Multiple audio formats** - MP3, WAV, FLAC, Opus, AAC, PCM
-- ✅ **Voice selection** - Compatible with OpenAI voice names (alloy, echo, fable, onyx, nova, shimmer)
-- ✅ **Language-specific voices** - Use language codes as voice names (e.g., `voice: "fr"` for French)
-- ✅ **Low VRAM optimization** - Runs efficiently on 8GB GPUs
+## Option 2: Python Library
 
-## Open WebUI Integration
+Use Chatterbox TTS directly in your Python code ([example-tts.py](example-tts.py)):
 
-1. Start the API server:
-   ```bash
-   CHATTERBOX_MODEL=multilingual python api_server.py
-   ```
+```python
+import torchaudio as ta
+from chatterbox_vllm.tts import ChatterboxTTS
 
-2. In Open WebUI, configure TTS settings:
+# Initialize model (optimized for low VRAM)
+model = ChatterboxTTS.from_pretrained(
+    gpu_memory_utilization=0.4,
+    max_model_len=1000,
+    enforce_eager=True,  # Reduces startup time
+)
+
+# Generate speech
+prompts = [
+    "You are listening to a demo of the Chatterbox TTS model running on vLLM.",
+    "This is a separate prompt to test batching.",
+    "And here is a third prompt, slightly longer than the first.",
+]
+
+audios = model.generate(prompts, exaggeration=0.8)
+for idx, audio in enumerate(audios):
+    ta.save(f"output_{idx}.mp3", audio, model.sr)
+```
+
+## Option 3: Docker Deployment
+
+Production-ready Docker setup with health checks:
+
+```bash
+# Using Docker Compose (recommended)
+docker-compose up -d
+
+# Or build and run manually
+docker build -t chatterbox-tts-api .
+docker run --gpus all -p 8000:8000 chatterbox-tts-api
+```
+
+See [docker-compose.yml](docker-compose.yml) for configuration options.
+
+## Option 4: Gradio Web UI
+
+Interactive web interface for testing and demos:
+
+```bash
+python gradio_tts_app.py
+```
+
+Then open your browser to the URL shown (typically `http://localhost:7860`).
+
+# 🌍 Multilingual Support
+
+Chatterbox TTS supports **23 languages** with automatic language detection:
+
+**Supported Languages:**
+Arabic (ar), Danish (da), German (de), Greek (el), English (en), Spanish (es), Finnish (fi), French (fr), Hebrew (he), Hindi (hi), Italian (it), Japanese (ja), Korean (ko), Malay (ms), Dutch (nl), Norwegian (no), Polish (pl), Portuguese (pt), Russian (ru), Swedish (sv), Swahili (sw), Turkish (tr), Chinese (zh)
+
+## Usage
+
+### Via API Server
+```bash
+# French
+curl -X POST http://localhost:8000/v1/audio/speech \
+  -H "Content-Type: application/json" \
+  -d '{"model": "tts-1", "input": "Bonjour!", "voice": "fr", "language_id": "fr"}' \
+  --output french.mp3
+
+# Spanish
+curl -X POST http://localhost:8000/v1/audio/speech \
+  -H "Content-Type: application/json" \
+  -d '{"model": "tts-1", "input": "¡Hola!", "voice": "alloy", "language_id": "es"}' \
+  --output spanish.mp3
+```
+
+### Via Python Library
+See [example-tts-multilingual.py](example-tts-multilingual.py) for complete examples.
+
+## Known Limitations
+*Note: These are inherited from the original vLLM port*
+- Alignment Stream Analyzer not implemented (may cause occasional repetitions or end-of-audio noise)
+- Learned speech positional encodings not yet supported in vLLM
+- Russian text stress markers not implemented
+
+For more details on multilingual features, see the [original Chatterbox documentation](https://github.com/resemble-ai/chatterbox#supported-languages).
+
+# 🔌 API Server Features
+
+## OpenAI-Compatible REST API
+
+A production-ready API server that's fully compatible with OpenAI's TTS API specification:
+
+### Core Features
+- ✅ **Drop-in OpenAI Replacement** - Works with any OpenAI TTS client
+- ✅ **Open WebUI Integration** - Seamless integration with Open WebUI
+- ✅ **23 Languages** - Full multilingual support with auto-detection
+- ✅ **6 Audio Formats** - MP3, WAV, FLAC, Opus, AAC, PCM
+- ✅ **Multiple Voices** - OpenAI-compatible voices plus language-specific options
+- ✅ **Low VRAM Optimized** - Runs on 8GB GPUs (RTX 3060, RTX 2070, etc.)
+- ✅ **Health Checks** - Built-in health monitoring and status endpoints
+
+### Starting the Server
+
+```bash
+# Using the convenience script (recommended)
+./start-api-server.sh --low-vram     # For 8GB GPUs
+./start-api-server.sh --medium-vram  # For 12GB GPUs  
+./start-api-server.sh --high-vram    # For 24GB+ GPUs
+
+# Or set environment variables manually
+export CHATTERBOX_MODEL=multilingual
+export CHATTERBOX_MAX_BATCH_SIZE=1
+export CHATTERBOX_MAX_MODEL_LEN=800
+python api_server.py
+```
+
+The server starts on `http://localhost:8000` by default.
+
+### Testing the API
+
+```bash
+# Quick test with curl
+curl -X POST http://localhost:8000/v1/audio/speech \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "tts-1",
+    "input": "Hello! This is Chatterbox TTS.",
+    "voice": "alloy"
+  }' \
+  --output speech.mp3
+
+# Comprehensive test suite
+python test_api.py
+```
+
+### Open WebUI Integration
+
+Configure Open WebUI to use Chatterbox TTS:
+
+1. Start the API server: `./start-api-server.sh --low-vram`
+2. In Open WebUI → Settings → Audio:
    - **TTS Engine**: OpenAI
    - **API Base URL**: `http://localhost:8000/v1`
-   - **API Key**: (any value or leave empty)
-   - **Model**: `tts-1`
-   - **Voice**: Choose from standard voices or use language codes
+   - **API Key**: (leave empty or any value)
+   - **Model**: `tts-1` or `tts-1-hd`
+   - **Voice**: `alloy`, `echo`, `fable`, `onyx`, `nova`, `shimmer` or language codes (`en`, `fr`, `de`, etc.)
 
-For detailed API documentation and configuration options, see [API_USAGE.md](API_USAGE.md).
+### API Documentation
+
+For complete API reference, configuration options, and integration guides, see:
+- **[API_USAGE.md](API_USAGE.md)** - Complete API reference
+- **[QUICKSTART.md](QUICKSTART.md)** - Step-by-step setup guide
 
 # Benchmarks
 

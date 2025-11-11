@@ -1,3 +1,18 @@
+# Chatterbox TTS on vLLM - Docker Compose Configuration
+#
+# Quick Start:
+#   docker-compose up -d              # Start in background
+#   docker-compose logs -f            # View logs
+#   docker-compose down               # Stop and remove
+#
+# For different VRAM configurations, adjust:
+#   - CHATTERBOX_MAX_BATCH_SIZE (1 for 8GB, 2 for 12GB, 3 for 24GB)
+#   - CHATTERBOX_MAX_MODEL_LEN (800 for 8GB, 1000 for 12GB, 1200 for 24GB)
+#
+# Access API at: http://localhost:8000
+# Health check: http://localhost:8000/health
+# API docs: http://localhost:8000
+
 version: '3.8'
 
 services:
@@ -10,16 +25,23 @@ services:
     ports:
       - "8000:8000"
     environment:
-      # Model configuration
-      - CHATTERBOX_MODEL=multilingual  # Options: english, multilingual
-      - CHATTERBOX_MAX_BATCH_SIZE=1    # Keep at 1 for low VRAM GPUs
-      - CHATTERBOX_MAX_MODEL_LEN=800   # Reduce for lower VRAM usage
+      # Model Configuration
+      # Options: 'english' (lower VRAM) or 'multilingual' (23 languages)
+      - CHATTERBOX_MODEL=multilingual
       
-      # Server configuration
+      # Memory Configuration (optimized for 8GB VRAM)
+      # Increase these values if you have more VRAM:
+      #   12GB GPU: MAX_BATCH_SIZE=2, MAX_MODEL_LEN=1000
+      #   24GB GPU: MAX_BATCH_SIZE=3, MAX_MODEL_LEN=1200
+      - CHATTERBOX_MAX_BATCH_SIZE=1
+      - CHATTERBOX_MAX_MODEL_LEN=800
+      
+      # Server Configuration
       - CHATTERBOX_HOST=0.0.0.0
       - CHATTERBOX_PORT=8000
       
-      # Optional: CFG scale
+      # Optional: Context-Free Guidance scale (0.0 to 1.0)
+      # Uncomment to enable (may increase VRAM usage)
       # - CHATTERBOX_CFG_SCALE=0.5
     deploy:
       resources:
@@ -30,7 +52,8 @@ services:
               capabilities: [gpu]
     restart: unless-stopped
     volumes:
-      # Optional: Mount local cache for model weights
+      # Cache model weights to avoid re-downloading
+      # Models are ~1-2GB and stored in Hugging Face cache
       - ~/.cache/huggingface:/root/.cache/huggingface
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
@@ -39,7 +62,10 @@ services:
       retries: 3
       start_period: 60s
 
-  # Optional: Add Open WebUI service
+  # Optional: Open WebUI Integration
+  # Uncomment to run Open WebUI alongside Chatterbox TTS
+  # Access Open WebUI at: http://localhost:3000
+  #
   # open-webui:
   #   image: ghcr.io/open-webui/open-webui:main
   #   container_name: open-webui

@@ -1,15 +1,16 @@
 [project]
 name = "chatterbox-vllm"
-description = "Chatterbox TTS ported to VLLM for efficienct and advanced inference tasks"
+description = "High-performance Chatterbox TTS on vLLM with OpenAI-compatible API, optimized for low VRAM GPUs"
 dynamic = ["version"]
 license = { file = "LICENSE" }
 requires-python = ">=3.10"
 readme = "README.md"
 authors = [
+    {name = "groxaxo"},
     {name = "David Li", email = "david@david-li.com"},
     {name = "resemble-ai", email = "engineering@resemble.ai"}
 ]
-keywords = ["llm", "gpt", "cli", "tts", "chatterbox"]
+keywords = ["llm", "tts", "text-to-speech", "chatterbox", "vllm", "api", "openai", "multilingual", "low-vram"]
 dependencies = [
     "torch",
     "torchaudio",
@@ -48,6 +49,9 @@ requires = ["setuptools", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project.urls]
-"Changelog" = "https://github.com/randombk/chatterbox-vllm/blob/master/README.md"
-"Source" = "https://github.com/randombk/chatterbox-vllm"
-"Tracker" = "https://github.com/randombk/chatterbox-vllm/issues"
+"Homepage" = "https://github.com/groxaxo/chatterbox-vllm2"
+"Source" = "https://github.com/groxaxo/chatterbox-vllm2"
+"Tracker" = "https://github.com/groxaxo/chatterbox-vllm2/issues"
+"Documentation" = "https://github.com/groxaxo/chatterbox-vllm2/blob/master/README.md"
+"Original vLLM Port" = "https://github.com/randombk/chatterbox-vllm"
+"Original Chatterbox" = "https://github.com/resemble-ai/chatterbox"

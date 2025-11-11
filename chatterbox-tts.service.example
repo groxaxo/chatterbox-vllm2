@@ -1,15 +1,22 @@
-# Systemd service file for Chatterbox TTS API Server
+# Chatterbox TTS on vLLM - Systemd Service Template
+#
+# OpenAI-compatible TTS API server for production deployment
+# Based on Chatterbox TTS (Resemble AI) and vLLM port by randombk
 # 
-# Installation:
-# 1. Copy this file to /etc/systemd/system/chatterbox-tts.service
-# 2. Update paths and user in the file
+# Installation Instructions:
+# 1. Copy this file: sudo cp chatterbox-tts.service.example /etc/systemd/system/chatterbox-tts.service
+# 2. Edit the file: sudo nano /etc/systemd/system/chatterbox-tts.service
+#    - Replace YOUR_USERNAME with your actual username
+#    - Replace /path/to/chatterbox-vllm2 with actual installation path
 # 3. Reload systemd: sudo systemctl daemon-reload
 # 4. Enable service: sudo systemctl enable chatterbox-tts
 # 5. Start service: sudo systemctl start chatterbox-tts
 # 6. Check status: sudo systemctl status chatterbox-tts
+# 7. View logs: sudo journalctl -u chatterbox-tts -f
 
 [Unit]
-Description=Chatterbox TTS API Server
+Description=Chatterbox TTS on vLLM - OpenAI-Compatible API Server
+Documentation=https://github.com/groxaxo/chatterbox-vllm2
 After=network.target
 
 [Service]
@@ -17,11 +24,18 @@ Type=simple
 User=YOUR_USERNAME
 Group=YOUR_USERNAME
 WorkingDirectory=/path/to/chatterbox-vllm2
+
+# Configuration (adjust based on your GPU)
+# For 8GB GPU (RTX 3060): Use these defaults
+# For 12GB GPU (RTX 3080): BATCH_SIZE=2, MODEL_LEN=1000
+# For 24GB GPU (RTX 3090): BATCH_SIZE=3, MODEL_LEN=1200
 Environment="CHATTERBOX_MODEL=multilingual"
 Environment="CHATTERBOX_MAX_BATCH_SIZE=1"
 Environment="CHATTERBOX_MAX_MODEL_LEN=800"
 Environment="CHATTERBOX_HOST=0.0.0.0"
 Environment="CHATTERBOX_PORT=8000"
+
+# Start command
 ExecStart=/path/to/chatterbox-vllm2/.venv/bin/python /path/to/chatterbox-vllm2/api_server.py
 
 # Restart on failure

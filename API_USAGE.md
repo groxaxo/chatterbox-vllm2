@@ -1,6 +1,10 @@
 # Chatterbox TTS API Server
 
-OpenAI-compatible TTS API server for Chatterbox TTS on vLLM, optimized for GPUs with less than 10GB VRAM.
+OpenAI-compatible TTS API server for Chatterbox TTS on vLLM, optimized for GPUs with as little as 8GB VRAM.
+
+**Built upon:**
+- [Resemble AI's Chatterbox](https://github.com/resemble-ai/chatterbox) - Original TTS model
+- [randombk's vLLM port](https://github.com/randombk/chatterbox-vllm) - Performance optimizations
 
 ## Features
 
