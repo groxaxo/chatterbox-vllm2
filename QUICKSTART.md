@@ -50,6 +50,9 @@ This will automatically download the required model weights from Hugging Face Hu
 The easiest way to start the server with optimized settings:
 
 ```bash
+# For 4-6GB VRAM GPUs (RTX 2060, GTX 1660 Ti) - with quantization
+./start-api-server.sh --ultra-low-vram
+
 # For 8GB VRAM GPUs (RTX 3060, RTX 2070)
 ./start-api-server.sh --low-vram
 
@@ -59,8 +62,15 @@ The easiest way to start the server with optimized settings:
 # For 24GB+ VRAM GPUs (RTX 3090, RTX 4090)
 ./start-api-server.sh --high-vram
 
-# Use English-only model for lower VRAM usage
-./start-api-server.sh --low-vram --english
+# Use English-only model for even lower VRAM usage
+./start-api-server.sh --ultra-low-vram --english
+```
+
+**Note:** Ultra-low VRAM mode requires the `bitsandbytes` library:
+```bash
+pip install bitsandbytes
+# or with uv:
+uv pip install ".[ultra-low-vram]"
 ```
 
 ### Option 2: Direct Python Command
@@ -162,24 +172,46 @@ To use different languages in Open WebUI, you can:
 
 ## Memory Usage
 
-With the default **low VRAM** configuration:
+### Ultra-Low VRAM Configuration (4-6GB GPUs)
+Using `--ultra-low-vram` with BnB 4-bit quantization:
+- **Model Loading**: ~3-4 GB
+- **During Generation**: ~4-6 GB peak
+- **Recommended**: 4GB+ VRAM
+- **Target GPUs**: RTX 2060 (6GB), GTX 1660 Ti (6GB), GTX 1650 (4GB)
+- **Trade-offs**: Slight quality reduction, ~10-20% slower inference
+
+### Low VRAM Configuration (8GB GPUs)
+Default configuration without quantization:
 - **Model Loading**: ~5-6 GB
 - **During Generation**: ~7-8 GB peak
 - **Recommended**: 8GB+ VRAM
+- **Target GPUs**: RTX 3060, RTX 2070, RTX 2060 Super
 
 ### If You Get Out of Memory Errors
 
-1. **Reduce max_model_len**:
+1. **Enable ultra-low VRAM mode**:
+   ```bash
+   ./start-api-server.sh --ultra-low-vram
+   ```
+
+2. **Reduce max_model_len**:
    ```bash
    CHATTERBOX_MAX_MODEL_LEN=600 python api_server.py
    ```
 
-2. **Use English-only model**:
+3. **Use English-only model**:
    ```bash
    CHATTERBOX_MODEL=english python api_server.py
    ```
 
-3. **Restart the service** (to clear any cached data):
+4. **Enable quantization manually**:
+   ```bash
+   CHATTERBOX_USE_QUANTIZATION=true \
+   CHATTERBOX_QUANTIZATION_METHOD=bnb-4bit \
+   python api_server.py
+   ```
+
+5. **Restart the service** (to clear any cached data):
    ```bash
    # Stop the server (Ctrl+C)
    # Start it again
@@ -196,7 +228,13 @@ export CHATTERBOX_MODEL=multilingual  # or 'english'
 
 # Memory settings
 export CHATTERBOX_MAX_BATCH_SIZE=1    # Keep at 1 for low VRAM
-export CHATTERBOX_MAX_MODEL_LEN=800   # Lower = less VRAM
+export CHATTERBOX_MAX_MODEL_LEN=800   # Lower = less VRAM (600 for ultra-low)
+
+# Ultra-low VRAM quantization settings
+export CHATTERBOX_USE_QUANTIZATION=true          # Enable quantization
+export CHATTERBOX_QUANTIZATION_METHOD=bnb-4bit   # bnb-4bit, bnb-8bit, or awq
+export CHATTERBOX_QUANTIZE_S3GEN=true            # Quantize S3Gen model
+export CHATTERBOX_QUANTIZE_VOICE_ENCODER=true    # Quantize Voice Encoder
 
 # Server settings
 export CHATTERBOX_HOST=0.0.0.0        # Listen on all interfaces

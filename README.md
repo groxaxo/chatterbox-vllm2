@@ -14,6 +14,7 @@ Special thanks to these pioneers for making such advanced TTS technology openly 
 
 This fork extends the original vLLM port with:
 - ✅ **OpenAI-Compatible API** - Drop-in replacement for OpenAI TTS API, works with Open WebUI and other clients
+- ✅ **Ultra-Low VRAM Mode** - Now supports 4-6GB GPUs with BnB/AWQ quantization (RTX 2060, GTX 1660 Ti)
 - ✅ **Low VRAM Optimization** - Runs efficiently on 8GB GPUs (RTX 3060, RTX 2070, etc.)
 - ✅ **Full Multilingual Support** - 23 languages with automatic language detection
 - ✅ **Production Ready** - Complete Docker setup, systemd service templates, health checks
@@ -59,6 +60,7 @@ This fork extends the original vLLM port with:
 * ✅ **Exaggeration Control** - Adjust emotion and expressiveness (0.0 to 2.0)
 * ✅ **vLLM Batching** - Significant speedup for multiple requests
 * ✅ **OpenAI API** - Full compatibility with OpenAI TTS clients
+* ✅ **Ultra-Low VRAM Support** - Runs on 4-6GB GPUs with BnB/AWQ quantization (RTX 2060, GTX 1660 Ti)
 * ✅ **Low VRAM Support** - Optimized for 8GB GPUs (RTX 3060, RTX 2070)
 * ✅ **23 Languages** - Multilingual support with automatic language detection
 * ✅ **Production Ready** - Docker, systemd templates, health checks
@@ -87,8 +89,10 @@ This fork extends the original vLLM port with:
 
 ## System Requirements
 - **OS**: Linux or WSL2 (Windows Subsystem for Linux)
-- **GPU**: NVIDIA GPU with 8GB+ VRAM
-  - Tested on: RTX 3060 (8GB), RTX 3080 (12GB), RTX 3090 (24GB)
+- **GPU**: NVIDIA GPU with 4GB+ VRAM
+  - Ultra-Low VRAM (4-6GB): RTX 2060, GTX 1660 Ti, GTX 1650 (with quantization)
+  - Low VRAM (8GB): RTX 3060, RTX 2070, RTX 2060 Super
+  - Medium/High VRAM (12GB+): RTX 3080, RTX 3090, RTX 4090
   - AMD GPUs may work with minor modifications (untested)
 - **Software**: Python 3.10+, CUDA toolkit
 
@@ -105,6 +109,9 @@ cd chatterbox-vllm2
 uv venv
 source .venv/bin/activate
 uv sync
+
+# Optional: For ultra-low VRAM mode (4-6GB GPUs), install quantization libraries
+uv pip install ".[ultra-low-vram]"
 ```
 
 The package will automatically download model weights from Hugging Face Hub (~1-2GB).
@@ -140,9 +147,10 @@ The easiest way to use Chatterbox TTS - compatible with Open WebUI and OpenAI cl
 
 ```bash
 # Start the API server (automatically optimized for your GPU)
-./start-api-server.sh --low-vram    # For 8GB GPUs
-./start-api-server.sh --medium-vram # For 12GB GPUs
-./start-api-server.sh --high-vram   # For 24GB+ GPUs
+./start-api-server.sh --ultra-low-vram # For 4-6GB GPUs (with quantization)
+./start-api-server.sh --low-vram       # For 8GB GPUs
+./start-api-server.sh --medium-vram    # For 12GB GPUs
+./start-api-server.sh --high-vram      # For 24GB+ GPUs
 
 # Or start directly with Python
 CHATTERBOX_MODEL=multilingual python api_server.py
