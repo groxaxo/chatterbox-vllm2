@@ -27,7 +27,8 @@ This fork extends the original vLLM port with:
 - Eliminates CPU-GPU sync bottlenecks from HF transformers
 
 👉 **Quick Start**: See [QUICKSTART.md](QUICKSTART.md) for setup on low VRAM GPUs  
-👉 **API Documentation**: See [API_USAGE.md](API_USAGE.md) for complete API reference
+👉 **API Documentation**: See [API_USAGE.md](API_USAGE.md) for complete API reference  
+👉 **Multilingual Guide**: See [MULTILINGUAL_VERIFICATION.md](MULTILINGUAL_VERIFICATION.md) for 23-language support verification
 
 ---
 
