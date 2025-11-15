@@ -101,7 +101,11 @@ class ChatterboxTTS:
                    **kwargs) -> 'ChatterboxTTS':
         ckpt_dir = Path(ckpt_dir)
 
-        t3_config = T3Config()
+        # Create appropriate config based on variant
+        if variant == "multilingual":
+            t3_config = T3Config.multilingual()
+        else:
+            t3_config = T3Config.english_only()
 
         # Load *just* the necessary weights to perform inference with T3CondEnc
         t3_weights = load_file(ckpt_dir / ("t3_cfg.safetensors" if variant == "english" else "t3_mtl23ls_v2.safetensors"))

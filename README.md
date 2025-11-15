@@ -27,7 +27,8 @@ This fork extends the original vLLM port with:
 - Eliminates CPU-GPU sync bottlenecks from HF transformers
 
 👉 **Quick Start**: See [QUICKSTART.md](QUICKSTART.md) for setup on low VRAM GPUs  
-👉 **API Documentation**: See [API_USAGE.md](API_USAGE.md) for complete API reference
+👉 **API Documentation**: See [API_USAGE.md](API_USAGE.md) for complete API reference  
+👉 **Multilingual Guide**: See [MULTILINGUAL_VERIFICATION.md](MULTILINGUAL_VERIFICATION.md) for 23-language support verification
 
 ---
 
@@ -228,10 +229,20 @@ Then open your browser to the URL shown (typically `http://localhost:7860`).
 
 # 🌍 Multilingual Support
 
-Chatterbox TTS supports **23 languages** with automatic language detection:
+Chatterbox TTS supports **23 languages** with advanced language-specific text processing and automatic language detection.
+
+**👉 For complete multilingual verification and testing instructions, see [MULTILINGUAL_VERIFICATION.md](MULTILINGUAL_VERIFICATION.md)**
 
 **Supported Languages:**
 Arabic (ar), Danish (da), German (de), Greek (el), English (en), Spanish (es), Finnish (fi), French (fr), Hebrew (he), Hindi (hi), Italian (it), Japanese (ja), Korean (ko), Malay (ms), Dutch (nl), Norwegian (no), Polish (pl), Portuguese (pt), Russian (ru), Swedish (sv), Swahili (sw), Turkish (tr), Chinese (zh)
+
+### Advanced Text Processing
+
+- **Japanese**: Automatic kanji-to-hiragana conversion using pykakasi
+- **Chinese**: Cangjie encoding with word segmentation
+- **Korean**: Hangul syllable decomposition to Jamo
+- **Russian**: Stress marking support (optional)
+- **Hebrew**: Diacritics addition (optional)
 
 ## Usage
 
@@ -257,9 +268,8 @@ See [example-tts-multilingual.py](example-tts-multilingual.py) for complete exam
 *Note: These are inherited from the original vLLM port*
 - Alignment Stream Analyzer not implemented (may cause occasional repetitions or end-of-audio noise)
 - Learned speech positional encodings not yet supported in vLLM
-- Russian text stress markers not implemented
 
-For more details on multilingual features, see the [original Chatterbox documentation](https://github.com/resemble-ai/chatterbox#supported-languages).
+For more details on multilingual features, see the [original Chatterbox documentation](https://github.com/resemble-ai/chatterbox#supported-languages) and our [Multilingual Verification Guide](MULTILINGUAL_VERIFICATION.md).
 
 # 🔌 API Server Features
 
