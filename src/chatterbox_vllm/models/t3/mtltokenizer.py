@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 REPO_ID = "ResembleAI/chatterbox"
 
 # Global instances for optional dependencies
-# _kakasi = None
+_kakasi = None
 _dicta = None
 _russian_stresser = None
 
@@ -40,6 +40,47 @@ def is_katakana(c: str) -> bool:
 
 
 def hiragana_normalize(text: str) -> str:
+    """Japanese text normalization: converts kanji to hiragana; katakana remains the same."""
+    global _kakasi
+    
+    try:
+        if _kakasi is None:
+            import pykakasi
+            _kakasi = pykakasi.kakasi()
+        
+        result = _kakasi.convert(text)
+        out = []
+        
+        for r in result:
+            inp = r['orig']
+            hira = r["hira"]
+
+            # Any kanji in the phrase
+            if any([is_kanji(c) for c in inp]):
+                if hira and hira[0] in ["は", "へ"]:  # Safety check for empty hira
+                    hira = " " + hira
+                out.append(hira)
+
+            # All katakana
+            elif all([is_katakana(c) for c in inp]) if inp else False:  # Safety check for empty inp
+                out.append(r['orig'])
+
+            else:
+                out.append(inp)
+        
+        normalized_text = "".join(out)
+        
+        # Decompose Japanese characters for tokenizer compatibility
+        import unicodedata
+        normalized_text = unicodedata.normalize('NFKD', normalized_text)
+        
+        return normalized_text
+        
+    except ImportError:
+        logger.warning("pykakasi not available - Japanese text processing skipped")
+        return text
+    except Exception as e:
+        logger.warning(f"Japanese text processing failed: {e}")
         return text
 
 
@@ -81,6 +122,25 @@ def korean_normalize(text: str) -> str:
     # Decompose syllables and normalize punctuation
     result = ''.join(decompose_hangul(char) for char in text)    
     return result.strip()
+
+
+def add_russian_stress(text: str) -> str:
+    """Russian text normalization: adds stress marks to Russian text."""
+    global _russian_stresser
+    
+    try:
+        if _russian_stresser is None:
+            from russian_text_stresser.text_stresser import RussianTextStresser
+            _russian_stresser = RussianTextStresser()
+        
+        return _russian_stresser.stress_text(text)
+        
+    except ImportError:
+        logger.warning("russian_text_stresser not available - Russian stress labeling skipped")
+        return text
+    except Exception as e:
+        logger.warning(f"Russian stress labeling failed: {e}")
+        return text
 
 
 class ChineseCangjieConverter:
