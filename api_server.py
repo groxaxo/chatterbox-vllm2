@@ -76,8 +76,16 @@ def get_voice_reference(voice: str) -> Optional[str]:
 def detect_language_from_voice(voice: str) -> Optional[str]:
     """Detect language ID from voice name."""
     # If voice is already a language code, use it
-    if model_type == "multilingual" and voice in MULTILINGUAL_VOICE_REFERENCES:
-        return voice
+    if model_type == "multilingual":
+        # Accept any supported language code directly, e.g., 'es', 'fr', 'de', etc.
+        try:
+            if model and voice in model.get_supported_languages():
+                return voice
+        except Exception:
+            pass
+        # Fallback to predefined references (subset)
+        if voice in MULTILINGUAL_VOICE_REFERENCES:
+            return voice
     
     # Otherwise return None for auto-detection or English
     return None
@@ -102,6 +110,8 @@ async def lifespan(app: FastAPI):
     quantization_method = os.environ.get("CHATTERBOX_QUANTIZATION_METHOD", "bnb-4bit")  # bnb-4bit, bnb-8bit, awq
     quantize_s3gen = os.environ.get("CHATTERBOX_QUANTIZE_S3GEN", "true").lower() == "true"
     quantize_voice_encoder = os.environ.get("CHATTERBOX_QUANTIZE_VOICE_ENCODER", "true").lower() == "true"
+    # Optional GPU memory utilization (fraction), defaults to a conservative value
+    gpu_memory_utilization = float(os.environ.get("CHATTERBOX_GPU_MEMORY_UTILIZATION", "0.08"))
     
     print(f"Loading {model_variant} model with max_batch_size={max_batch_size}, max_model_len={max_model_len}")
     
@@ -119,6 +129,8 @@ async def lifespan(app: FastAPI):
         "quantization_method": quantization_method,
         "quantize_s3gen": quantize_s3gen,
         "quantize_voice_encoder": quantize_voice_encoder,
+        "gpu_memory_utilization": gpu_memory_utilization,
+        "enforce_eager": True,
     }
     
     if model_variant == "multilingual":
