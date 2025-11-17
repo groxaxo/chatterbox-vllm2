@@ -14,7 +14,7 @@ from safetensors.torch import load_file
 
 from chatterbox_vllm.models.t3.modules.t3_config import T3Config
 
-from .models.s3tokenizer import S3_SR, drop_invalid_tokens
+from .models.s3tokenizer import S3_SR, SPEECH_VOCAB_SIZE, drop_invalid_tokens
 from .models.s3gen import S3GEN_SR, S3Gen
 from .models.voice_encoder import VoiceEncoder
 from .models.t3 import SPEECH_TOKEN_OFFSET
@@ -412,9 +412,30 @@ class ChatterboxTTS:
                     if i % 10 == 0:
                         torch.cuda.empty_cache()
 
-                    speech_tokens = torch.tensor([token - SPEECH_TOKEN_OFFSET for token in output.token_ids], device="cuda")
-                    speech_tokens = drop_invalid_tokens(speech_tokens)
-                    speech_tokens = speech_tokens[speech_tokens < 6561]
+                    # Convert token IDs to speech tokens by subtracting the offset
+                    # T3 uses SPEECH_TOKEN_OFFSET to distinguish text tokens (< offset) from speech tokens (>= offset)
+                    raw_token_ids = output.token_ids
+                    
+                    # Check for any unexpected tokens before offset subtraction
+                    if raw_token_ids and (min(raw_token_ids) < SPEECH_TOKEN_OFFSET):
+                        print(f"[WARNING] Found tokens below SPEECH_TOKEN_OFFSET: min={min(raw_token_ids)}, expected >= {SPEECH_TOKEN_OFFSET}")
+                        print(f"[WARNING] This suggests text/prompt tokens are included in the output, which should not happen")
+                    
+                    speech_tokens = torch.tensor([token - SPEECH_TOKEN_OFFSET for token in raw_token_ids], device="cuda")
+                    
+                    # Ensure all tokens are in valid range [0, SPEECH_VOCAB_SIZE)
+                    # Any tokens outside this range are invalid and will cause gibberish output
+                    if len(speech_tokens) > 0:
+                        min_token = speech_tokens.min().item()
+                        max_token = speech_tokens.max().item()
+                        if min_token < 0:
+                            print(f"[ERROR] Found negative speech tokens (min={min_token}), filtering them out")
+                        if max_token >= SPEECH_VOCAB_SIZE:
+                            print(f"[WARNING] Found tokens >= SPEECH_VOCAB_SIZE (max={max_token}), filtering them out")
+                    
+                    # Filter to keep only valid speech tokens
+                    # Remove: negative tokens (text tokens), special tokens (>=6561)
+                    speech_tokens = speech_tokens[(speech_tokens >= 0) & (speech_tokens < SPEECH_VOCAB_SIZE)]
 
                     wav, _ = self.s3gen.inference(
                         speech_tokens=speech_tokens,
