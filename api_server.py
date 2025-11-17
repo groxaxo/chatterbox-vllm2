@@ -18,37 +18,52 @@ from pydantic import BaseModel, Field
 from chatterbox_vllm.tts import ChatterboxTTS
 
 
-# Global model instance
+# Global model instance - always use multilingual
 model = None
-model_type = None  # 'english' or 'multilingual'
+model_type = "multilingual"  # Always multilingual
 
 
 class TTSRequest(BaseModel):
-    """OpenAI-compatible TTS request model."""
+    """OpenAI-compatible TTS request model.
+    
+    Compatible with Open WebUI and other OpenAI TTS API clients.
+    Supports both OpenAI preset voices and language codes.
+    """
     model: str = Field(default="tts-1", description="Model to use (tts-1 or tts-1-hd)")
     input: str = Field(..., description="Text to synthesize", max_length=4096)
-    voice: str = Field(default="alloy", description="Voice to use (alloy, echo, fable, onyx, nova, shimmer, or language codes like en, fr, de, etc.)")
+    voice: str = Field(
+        default="alloy",
+        description="Voice to use. OpenAI presets: alloy, echo, fable, onyx, nova, shimmer (work with any language). "
+                    "Language codes: en (English), es (Spanish), fr (French), de (German), etc."
+    )
     response_format: Literal["mp3", "opus", "aac", "flac", "wav", "pcm"] = Field(default="mp3", description="Audio format")
     speed: float = Field(default=1.0, ge=0.25, le=4.0, description="Speed of speech (0.25 to 4.0)")
     
     # Chatterbox-specific extensions (optional)
     exaggeration: Optional[float] = Field(default=0.5, ge=0.0, le=2.0, description="Emotion exaggeration (0.5 is neutral)")
     temperature: Optional[float] = Field(default=0.8, ge=0.0, le=2.0, description="Sampling temperature")
-    language_id: Optional[str] = Field(default=None, description="Language code (for multilingual model)")
+    language_id: Optional[str] = Field(
+        default=None,
+        description="Explicit language code (en, es, fr, de, etc.). If not provided, language is auto-detected from input or voice parameter."
+    )
 
 
 # Mapping of OpenAI voice names to reference audio files
+# OpenAI voices are language-agnostic and work with any language
 VOICE_REFERENCES = {
-    "alloy": None,  # Use default voice
-    "echo": "docs/audio-sample-01.mp3",
-    "fable": "docs/audio-sample-02.mp3", 
-    "onyx": "docs/audio-sample-03.mp3",
-    "nova": None,
-    "shimmer": None,
+    "alloy": None,  # Use default voice (neutral, works for all languages)
+    "echo": "docs/audio-sample-01.mp3",  # Works for all languages
+    "fable": "docs/audio-sample-02.mp3",  # Works for all languages
+    "onyx": "docs/audio-sample-03.mp3",  # Works for all languages
+    "nova": None,  # Use default voice (works for all languages)
+    "shimmer": None,  # Use default voice (works for all languages)
 }
 
 # Mapping of language codes to voice files (for multilingual)
+# These are used when voice is specified as a language code directly
 MULTILINGUAL_VOICE_REFERENCES = {
+    "en": None,  # English - use default voice
+    "es": None,  # Spanish - use default voice
     "fr": "docs/fr_f1.flac",
     "de": "docs/de_f1.flac",
     "zh": "docs/zh_m1.mp3",
@@ -56,7 +71,11 @@ MULTILINGUAL_VOICE_REFERENCES = {
 
 
 def get_voice_reference(voice: str) -> Optional[str]:
-    """Get the audio reference file path for a given voice name."""
+    """Get the audio reference file path for a given voice name.
+    
+    OpenAI voice names (alloy, echo, fable, onyx, nova, shimmer) work with any language.
+    Language codes (en, es, fr, de, etc.) can also be used as voice identifiers.
+    """
     # Check if it's a standard OpenAI voice name
     if voice in VOICE_REFERENCES:
         ref_path = VOICE_REFERENCES[voice]
@@ -64,30 +83,30 @@ def get_voice_reference(voice: str) -> Optional[str]:
             return ref_path
         return None
     
-    # Check if it's a language code for multilingual
-    if model_type == "multilingual" and voice in MULTILINGUAL_VOICE_REFERENCES:
+    # Check if it's a language code with a specific voice file
+    if voice in MULTILINGUAL_VOICE_REFERENCES:
         ref_path = MULTILINGUAL_VOICE_REFERENCES[voice]
-        if Path(ref_path).exists():
+        if ref_path and Path(ref_path).exists():
             return ref_path
     
     return None
 
 
 def detect_language_from_voice(voice: str) -> Optional[str]:
-    """Detect language ID from voice name."""
-    # If voice is already a language code, use it
-    if model_type == "multilingual":
-        # Accept any supported language code directly, e.g., 'es', 'fr', 'de', etc.
-        try:
-            if model and voice in model.get_supported_languages():
-                return voice
-        except Exception:
-            pass
-        # Fallback to predefined references (subset)
-        if voice in MULTILINGUAL_VOICE_REFERENCES:
-            return voice
+    """Detect language ID from voice name.
     
-    # Otherwise return None for auto-detection or English
+    If voice is a language code (en, es, fr, etc.), use it as the language.
+    If voice is an OpenAI preset (alloy, echo, etc.), return None for auto-detection.
+    """
+    # If voice is already a supported language code, use it
+    if model and voice in model.get_supported_languages():
+        return voice
+    
+    # If voice is an OpenAI preset name, return None for auto-detection
+    if voice in VOICE_REFERENCES:
+        return None
+    
+    # Otherwise return None for auto-detection
     return None
 
 
@@ -96,8 +115,11 @@ async def lifespan(app: FastAPI):
     """Initialize model on startup and cleanup on shutdown."""
     global model, model_type
     
-    # Determine which model to load based on environment variable
+    # Always use multilingual model for Spanish and English support
     model_variant = os.environ.get("CHATTERBOX_MODEL", "multilingual").lower()
+    if model_variant != "multilingual":
+        print(f"[WARNING] CHATTERBOX_MODEL={model_variant} is not supported. Using 'multilingual' instead.")
+        model_variant = "multilingual"
     
     # Settings optimized for <10GB VRAM (e.g., RTX 3060 with 8GB)
     # max_batch_size=1 ensures minimal memory usage
@@ -113,7 +135,8 @@ async def lifespan(app: FastAPI):
     # Optional GPU memory utilization (fraction), defaults to a conservative value
     gpu_memory_utilization = float(os.environ.get("CHATTERBOX_GPU_MEMORY_UTILIZATION", "0.08"))
     
-    print(f"Loading {model_variant} model with max_batch_size={max_batch_size}, max_model_len={max_model_len}")
+    print(f"[INFO] Loading multilingual model with Spanish and English support")
+    print(f"[INFO] Configuration: max_batch_size={max_batch_size}, max_model_len={max_model_len}")
     
     if use_quantization:
         print(f"[INFO] Ultra-low VRAM mode enabled with {quantization_method} quantization")
@@ -133,15 +156,10 @@ async def lifespan(app: FastAPI):
         "enforce_eager": True,
     }
     
-    if model_variant == "multilingual":
-        model = ChatterboxTTS.from_pretrained_multilingual(**model_kwargs)
-        model_type = "multilingual"
-        print(f"[INFO] Multilingual model loaded. Supported languages: {', '.join(model.get_supported_languages().keys())}")
-    else:
-        model = ChatterboxTTS.from_pretrained(**model_kwargs)
-        model_type = "english"
-        print("[INFO] English model loaded")
-    
+    # Always load multilingual model
+    model = ChatterboxTTS.from_pretrained_multilingual(**model_kwargs)
+    model_type = "multilingual"
+    print(f"[INFO] Multilingual model loaded. Supported languages: {', '.join(model.get_supported_languages().keys())}")
     print(f"[INFO] Model loaded successfully. GPU memory: {torch.cuda.memory_allocated() / 1024**2:.2f} MB")
     
     yield
@@ -222,11 +240,13 @@ async def create_speech(request: TTSRequest):
     try:
         # Determine language from voice name or explicit language_id
         language_id = request.language_id or detect_language_from_voice(request.voice)
-        if language_id is None:
-            language_id = "en" if model_type == "english" else "en"
         
-        # Validate language support
-        if model_type == "multilingual" and language_id not in model.get_supported_languages():
+        # Default to English if no language specified or detected
+        if language_id is None:
+            language_id = "en"
+        
+        # Validate language support (multilingual model always loaded)
+        if language_id not in model.get_supported_languages():
             raise HTTPException(
                 status_code=400,
                 detail=f"Unsupported language '{language_id}'. Supported: {', '.join(model.get_supported_languages().keys())}"
@@ -236,7 +256,9 @@ async def create_speech(request: TTSRequest):
         audio_prompt_path = get_voice_reference(request.voice)
         
         # Generate audio
-        print(f"[TTS] Generating speech for text: '{request.input[:50]}...' (language: {language_id}, voice: {request.voice})")
+        # OpenAI voices (alloy, echo, fable, onyx, nova, shimmer) are language-agnostic
+        # and work with any language based on the input text or language_id
+        print(f"[TTS] Generating speech for text: '{request.input[:50]}...' (language: {language_id}, voice: {request.voice}, reference: {audio_prompt_path or 'default'})")
         
         audios = model.generate(
             [request.input],
@@ -312,13 +334,14 @@ if __name__ == "__main__":
     host = os.environ.get("CHATTERBOX_HOST", "0.0.0.0")
     port = int(os.environ.get("CHATTERBOX_PORT", "8000"))
     
-    print(f"Starting Chatterbox TTS API server on {host}:{port}")
+    print(f"Starting Chatterbox TTS API server (Multilingual) on {host}:{port}")
     print("=" * 60)
-    print("Environment variables:")
-    print(f"  CHATTERBOX_MODEL: {os.environ.get('CHATTERBOX_MODEL', 'multilingual')} (options: english, multilingual)")
-    print(f"  CHATTERBOX_MAX_BATCH_SIZE: {os.environ.get('CHATTERBOX_MAX_BATCH_SIZE', '1')}")
-    print(f"  CHATTERBOX_MAX_MODEL_LEN: {os.environ.get('CHATTERBOX_MAX_MODEL_LEN', '800')}")
-    print(f"  CHATTERBOX_CFG_SCALE: {os.environ.get('CHATTERBOX_CFG_SCALE', '(not set)')}")
+    print("Configuration:")
+    print(f"  Model: Multilingual (Spanish & English support)")
+    print(f"  Max Batch Size: {os.environ.get('CHATTERBOX_MAX_BATCH_SIZE', '1')}")
+    print(f"  Max Model Length: {os.environ.get('CHATTERBOX_MAX_MODEL_LEN', '800')}")
+    print(f"  OpenAI Voice Presets: alloy, echo, fable, onyx, nova, shimmer")
+    print(f"  Supported Languages: 23 languages including en, es, fr, de, etc.")
     print("=" * 60)
     
     uvicorn.run(

@@ -45,11 +45,11 @@ OPTIONS:
     --low-vram          Optimize for GPUs with 8GB VRAM (RTX 3060, RTX 2070, etc.)
     --medium-vram       Optimize for GPUs with 12GB VRAM (RTX 3060Ti, RTX 3080, etc.)
     --high-vram         Optimize for GPUs with 24GB+ VRAM (RTX 3090, RTX 4090, etc.)
-    --english           Use English-only model (lower VRAM usage)
-    --multilingual      Use multilingual model (default)
     --port PORT         Set server port (default: 8000)
     --host HOST         Set server host (default: 0.0.0.0)
     --help              Show this help message
+
+NOTE: This server only supports the multilingual model with full Spanish and English support.
 
 EXAMPLES:
     # Start with default settings (multilingual, low VRAM)
@@ -61,8 +61,8 @@ EXAMPLES:
     # Start with low VRAM optimization (8GB GPU)
     $0 --low-vram
 
-    # Start with English model and medium VRAM
-    $0 --english --medium-vram
+    # Start with medium VRAM
+    $0 --medium-vram
 
     # Start on custom port
     $0 --port 8080
@@ -124,16 +124,6 @@ while [[ $# -gt 0 ]]; do
             print_info "High VRAM mode: max_batch_size=3, max_model_len=1200"
             shift
             ;;
-        --english)
-            MODEL="english"
-            print_info "Using English-only model"
-            shift
-            ;;
-        --multilingual)
-            MODEL="multilingual"
-            print_info "Using multilingual model"
-            shift
-            ;;
         --port)
             PORT="$2"
             print_info "Using port: $PORT"
@@ -159,10 +149,10 @@ done
 # Print configuration
 echo ""
 echo "=========================================="
-echo "Chatterbox TTS API Server"
+echo "Chatterbox TTS API Server (Multilingual)"
 echo "=========================================="
 echo "Configuration:"
-echo "  Model:              $MODEL"
+echo "  Model:              multilingual (Spanish & English support)"
 echo "  Max Batch Size:     $MAX_BATCH_SIZE"
 echo "  Max Model Len:      $MAX_MODEL_LEN"
 echo "  Host:               $HOST"
