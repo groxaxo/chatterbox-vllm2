@@ -96,6 +96,8 @@ Configure Open WebUI for Spanish/English TTS:
   
 **Tip:** When using OpenAI preset voices, the language is automatically detected from your input text, or you can explicitly specify it via the `language_id` parameter in API calls.
 
+> **New in this build:** The API now scores each streaming chunk using script ranges, accent characters, and stopwords before handing text to the speech model. That means Open WebUI can keep sending short Spanish (or any other language) snippets while the voice stays on `alloy`—the backend will pin the right `language_id` automatically unless you override it.
+
 ---
 
 **Note**: This is a community project and is not officially affiliated with Resemble AI or any corporate entity.
@@ -243,9 +245,20 @@ model.shutdown()
 Chatterbox TTS supports **23 languages** including Spanish with automatic language detection.
 
 **Supported Languages:**
+
 Arabic (ar), Danish (da), German (de), Greek (el), English (en), **Spanish (es)**, Finnish (fi), French (fr), Hebrew (he), Hindi (hi), Italian (it), Japanese (ja), Korean (ko), Malay (ms), Dutch (nl), Norwegian (no), Polish (pl), Portuguese (pt), Russian (ru), Swedish (sv), Swahili (sw), Turkish (tr), Chinese (zh)
 
+### Automatic Language Detection Details
+
+For Open WebUI streaming (and any other client that sends piecemeal text), the server now:
+- Checks Unicode script blocks (e.g., Han, Katakana, Hangul, Cyrillic) to immediately match languages with distinct scripts.
+- Scores special language-specific diacritics (á, é, ç, ğ, å, etc.) to differentiate Latin-based languages.
+- Looks for lightweight stopwords per language when the chunk is short or mostly ASCII.
+
+If none of the heuristics fire, the system defaults to English, but you can always override with `language_id` or a language-code voice. This drastically reduces the “gibberish drift” that occurred when Spanish text was accidentally forced through the English token stream.
+
 ### Language-Specific Usage
+
 
 ```bash
 # Spanish with language code

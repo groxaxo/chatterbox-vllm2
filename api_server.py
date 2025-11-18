@@ -16,6 +16,7 @@ from fastapi import FastAPI, HTTPException, Response
 from pydantic import BaseModel, Field
 
 from chatterbox_vllm.tts import ChatterboxTTS
+from chatterbox_vllm.text_utils import detect_language_from_text
 
 
 # Global model instance - always use multilingual
@@ -51,22 +52,22 @@ class TTSRequest(BaseModel):
 # Mapping of OpenAI voice names to reference audio files
 # OpenAI voices are language-agnostic and work with any language
 VOICE_REFERENCES = {
-    "alloy": None,  # Use default voice (neutral, works for all languages)
-    "echo": "docs/audio-sample-01.mp3",  # Works for all languages
-    "fable": "docs/audio-sample-02.mp3",  # Works for all languages
-    "onyx": "docs/audio-sample-03.mp3",  # Works for all languages
-    "nova": None,  # Use default voice (works for all languages)
-    "shimmer": None,  # Use default voice (works for all languages)
+    "alloy": "docs/monica_optimized.wav",  # Use monica optimized voice
+    "echo": "docs/monica_optimized.wav",  # Use monica optimized voice
+    "fable": "docs/monica_optimized.wav",  # Use monica optimized voice
+    "onyx": "docs/monica_optimized.wav",  # Use monica optimized voice
+    "nova": "docs/monica_optimized.wav",  # Use monica optimized voice
+    "shimmer": "docs/monica_optimized.wav",  # Use monica optimized voice
 }
 
 # Mapping of language codes to voice files (for multilingual)
 # These are used when voice is specified as a language code directly
 MULTILINGUAL_VOICE_REFERENCES = {
-    "en": None,  # English - use default voice
-    "es": None,  # Spanish - use default voice
-    "fr": "docs/fr_f1.flac",
-    "de": "docs/de_f1.flac",
-    "zh": "docs/zh_m1.mp3",
+    "en": "docs/monica_optimized.wav",  # English - use monica optimized voice
+    "es": "docs/monica_optimized.wav",  # Spanish - use monica optimized voice
+    "fr": "docs/monica_optimized.wav",  # French - use monica optimized voice
+    "de": "docs/monica_optimized.wav",  # German - use monica optimized voice
+    "zh": "docs/monica_optimized.wav",  # Chinese - use monica optimized voice
 }
 
 
@@ -238,18 +239,19 @@ async def create_speech(request: TTSRequest):
         raise HTTPException(status_code=400, detail="Input text is required")
     
     try:
-        # Determine language from voice name or explicit language_id
+        supported_languages = model.get_supported_languages()
         language_id = request.language_id or detect_language_from_voice(request.voice)
+        if not language_id:
+            language_id = detect_language_from_text(
+                request.input,
+                supported_languages=supported_languages.keys(),
+                default="en",
+            )
         
-        # Default to English if no language specified or detected
-        if language_id is None:
-            language_id = "en"
-        
-        # Validate language support (multilingual model always loaded)
-        if language_id not in model.get_supported_languages():
+        if language_id not in supported_languages:
             raise HTTPException(
                 status_code=400,
-                detail=f"Unsupported language '{language_id}'. Supported: {', '.join(model.get_supported_languages().keys())}"
+                detail=f"Unsupported language '{language_id}'. Supported: {', '.join(supported_languages.keys())}"
             )
         
         # Get voice reference audio
