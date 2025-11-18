@@ -637,7 +637,26 @@ class T3VllmModel(nn.Module, VllmModelForTextGeneration, SupportsMultiModal):
         # print("t3/cond_embeds", cond_embeds.shape, cond_embeds.dtype)
         # print("t3/uncond_embeds", uncond_embeds.shape, uncond_embeds.dtype)
 
-        # TODO: Apply speech positional embeddings here
+        # Apply speech positional embeddings during decoding
+        # This is crucial for the model to understand the sequential position of generated speech tokens
+        # We use the positions parameter which tracks the absolute position in the sequence
+        # The positions include: [conditioning (34) + text tokens + speech tokens...]
+        # We need to subtract the conditioning and text offset to get the speech token position
+        CONDITIONING_OFFSET = CONDITIONING_SIZE + 1  # +1 for the start-of-speech token
+        
+        # For each position, calculate which speech position it corresponds to
+        # Positions during decoding start after the conditioning and text tokens
+        for i in range(len(positions)):
+            pos = positions[i].item()
+            # Only apply positional embeddings to speech tokens (those beyond conditioning)
+            if pos >= CONDITIONING_OFFSET:
+                speech_pos = pos - CONDITIONING_OFFSET
+                # Make sure we don't go beyond our precomputed embeddings
+                if speech_pos < len(self.precomputed_speech_pos_emb):
+                    # Add positional embedding to both conditioned and unconditioned embeddings
+                    pos_emb = self.precomputed_speech_pos_emb[speech_pos]
+                    cond_embeds[i] = cond_embeds[i] + pos_emb
+                    uncond_embeds[i] = uncond_embeds[i] + pos_emb
 
         hidden_states = self.tfmr(
             input_ids=None,
