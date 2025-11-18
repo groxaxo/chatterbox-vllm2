@@ -21,6 +21,7 @@ from .models.t3 import SPEECH_TOKEN_OFFSET
 from .models.t3.modules.cond_enc import T3Cond, T3CondEnc
 from .models.t3.modules.learned_pos_emb import LearnedPositionEmbeddings
 from .text_utils import punc_norm, SUPPORTED_LANGUAGES
+from .models.t3.inference.alignment_stream_analyzer import AlignmentStreamAnalyzer
 
 REPO_ID = "ResembleAI/chatterbox"
 
@@ -296,6 +297,73 @@ class ChatterboxTTS:
         ).to('cpu')
         return new_cond_emb
 
+    def analyze_and_clean_tokens(self, token_ids: list[int], text_token_count: int) -> torch.Tensor:
+        """
+        Analyze generated speech tokens for quality issues and clean them up.
+        
+        This method uses the AlignmentStreamAnalyzer to detect:
+        - Token repetitions that indicate hallucinations
+        - Long tails (generation continuing too long after text completion)
+        - False starts (noisy beginnings)
+        
+        Args:
+            token_ids: List of generated speech token IDs (already offset-adjusted)
+            text_token_count: Number of text tokens in the input prompt
+            
+        Returns:
+            Cleaned tensor of speech tokens
+        """
+        if not token_ids:
+            return torch.tensor([], device="cuda")
+        
+        # Create analyzer for this sequence
+        analyzer = AlignmentStreamAnalyzer(
+            text_tokens_count=text_token_count,
+            eos_token_id=self.t3_config.stop_speech_token,
+            device="cuda"
+        )
+        
+        # Analyze each token to find where quality issues occur
+        cleaned_tokens = []
+        should_stop = False
+        
+        for i, token_id in enumerate(token_ids):
+            if should_stop:
+                break
+            
+            # Simulate logits (not used in simplified version)
+            dummy_logits = torch.zeros(1, self.t3_config.speech_tokens_dict_size, device="cuda")
+            
+            # Step the analyzer
+            modified_logits = analyzer.step(
+                dummy_logits,
+                next_token=torch.tensor(token_id, device="cuda")
+            )
+            
+            # Check if analyzer wants to force stop
+            eos_logit = modified_logits[0, self.t3_config.stop_speech_token].item()
+            if eos_logit > 2**14:  # Very high EOS logit means we should stop
+                should_stop = True
+                print(f"[ALIGNMENT] Stopping generation at token {i}/{len(token_ids)} due to quality issues")
+                break
+            
+            cleaned_tokens.append(token_id)
+        
+        # Get analysis results
+        result = analyzer.get_analysis_result()
+        if result.repetition:
+            print(f"[ALIGNMENT] Detected repetition in generated tokens")
+        if result.long_tail:
+            print(f"[ALIGNMENT] Detected long tail (extra audio after text completion)")
+        
+        # If we detected issues and cleaned tokens, report the reduction
+        if len(cleaned_tokens) < len(token_ids):
+            removed_count = len(token_ids) - len(cleaned_tokens)
+            removed_pct = (removed_count / len(token_ids)) * 100
+            print(f"[ALIGNMENT] Removed {removed_count} tokens ({removed_pct:.1f}%) from generation")
+        
+        return torch.tensor(cleaned_tokens, device="cuda") if cleaned_tokens else torch.tensor([], device="cuda")
+
     def generate(
         self,
         prompts: Union[str, list[str]],
@@ -421,7 +489,15 @@ class ChatterboxTTS:
                         print(f"[WARNING] Found tokens below SPEECH_TOKEN_OFFSET: min={min(raw_token_ids)}, expected >= {SPEECH_TOKEN_OFFSET}")
                         print(f"[WARNING] This suggests text/prompt tokens are included in the output, which should not happen")
                     
-                    speech_tokens = torch.tensor([token - SPEECH_TOKEN_OFFSET for token in raw_token_ids], device="cuda")
+                    speech_tokens = [token - SPEECH_TOKEN_OFFSET for token in raw_token_ids]
+                    
+                    # Estimate text token count from the prompt
+                    # This is approximate - in a full implementation we'd get the exact count from the tokenizer
+                    text_token_count = len(prompts[i].split()) * 2  # Rough estimate: ~2 tokens per word
+                    
+                    # Analyze and clean tokens using AlignmentStreamAnalyzer
+                    # This removes repetitions, long tails, and other quality issues
+                    speech_tokens = self.analyze_and_clean_tokens(speech_tokens, text_token_count)
                     
                     # Ensure all tokens are in valid range [0, SPEECH_VOCAB_SIZE)
                     # Any tokens outside this range are invalid and will cause gibberish output

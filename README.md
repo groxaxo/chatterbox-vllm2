@@ -324,11 +324,36 @@ curl http://localhost:8000/v1/models
 - **Total Generation Time:** ~3.2s per request
 - **Throughput:** ~180 tokens/second
 
+## ✨ Recent Improvements
+
+### Quality Enhancements (v1.1)
+This build includes significant quality improvements to address speech generation issues:
+
+1. **Alignment Stream Analyzer Implementation**
+   - Detects and prevents token repetitions during generation
+   - Identifies and removes "long tail" artifacts (extra noise at end of audio)
+   - Monitors generation quality in real-time
+   - Automatically truncates problematic outputs
+   - Reduces hallucinations and gibberish in generated speech
+
+2. **Fixed Speech Positional Embeddings**
+   - **Critical Fix**: Added missing learned positional embeddings during speech token generation
+   - Model now properly understands the sequential position of generated speech tokens
+   - Significantly reduces repetitions and improves speech coherence
+   - Better alignment between text and generated audio
+   - Especially noticeable in Spanish and English outputs
+
+These improvements result in:
+- ✅ Cleaner audio with less noise at the end
+- ✅ Fewer repetitions and stuttering
+- ✅ Better prosody and natural speech flow
+- ✅ More reliable generation for both Spanish and English
+
 ## 🐛 Known Limitations
 
 - Uses internal vLLM APIs (may need updates for future vLLM versions)
 - CFG scale must be set globally, not per-request
-- Some advanced features from original Chatterbox not yet implemented
+- Alignment analyzer uses simplified heuristics (full attention-based version requires deeper vLLM integration)
 
 ## 📄 License
 

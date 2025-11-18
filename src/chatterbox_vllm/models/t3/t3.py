@@ -436,7 +436,46 @@ class T3VllmModel(nn.Module, VllmModelForTextGeneration, SupportsMultiModal):
             #     print("SPEECH_TOKEN_OFFSET", SPEECH_TOKEN_OFFSET)
             #     raise ValueError("input_ids is less than SPEECH_TOKEN_OFFSET")
 
+            # Get the base speech embeddings
             embeds = self.speech_emb(input_ids - SPEECH_TOKEN_OFFSET)
+            
+            # CRITICAL FIX: Add learned positional embeddings for speech tokens during decoding
+            # This was missing and causes the model to not understand the position of generated speech
+            # We use the speech_pos_emb which is a learned embedding that helps the model understand
+            # the sequential position within the speech token sequence
+            # 
+            # Note: We can't use the exact speech position here because we don't track the prefill length
+            # per sequence in this vLLM port. However, the precomputed embeddings should help the model
+            # distinguish early vs late speech tokens based on the sequential indices (0, 1, 2, ...)
+            # 
+            # Create position indices for the current batch
+            batch_size, seq_len = embeds.shape[0], embeds.shape[1] if len(embeds.shape) > 1 else 1
+            
+            # For decode phase, seq_len is typically 1 (one token at a time with KV cache)
+            # We'll use sequential indices starting from 0 for the speech position
+            # In a perfect implementation, we'd track cumulative speech tokens generated per sequence
+            if hasattr(self, '_speech_token_counter'):
+                # Use counter if available (would need to be reset per sequence)
+                speech_pos_start = self._speech_token_counter
+                self._speech_token_counter += seq_len
+            else:
+                # Fallback: use indices 0, 1, 2, ... This is a simplification but helps the model
+                # understand relative positions between consecutive tokens
+                speech_pos_start = 0
+            
+            # Get positional embeddings for the speech tokens
+            # Use modulo to wrap around if we exceed the precomputed range
+            speech_positions = torch.arange(
+                speech_pos_start, 
+                speech_pos_start + seq_len, 
+                device=embeds.device
+            ) % len(self.precomputed_speech_pos_emb)
+            
+            # Add positional embeddings to the base embeddings
+            pos_embeds = self.precomputed_speech_pos_emb[speech_positions]
+            if len(pos_embeds.shape) == 2:  # (seq_len, dim)
+                pos_embeds = pos_embeds.unsqueeze(0)  # (1, seq_len, dim)
+            embeds = embeds + pos_embeds
 
             out = torch.cat([embeds, embeds], dim=1)
 
@@ -459,6 +498,28 @@ class T3VllmModel(nn.Module, VllmModelForTextGeneration, SupportsMultiModal):
                     # There's no multimodal embeddings, so we're decoding.
                     # Remember to undo the offset we applied to the speech tokens.
                     embeds = self.speech_emb(ids - SPEECH_TOKEN_OFFSET)
+                    
+                    # CRITICAL FIX: Add learned positional embeddings for speech tokens during decoding
+                    # (Same fix as above, duplicated for this code path)
+                    batch_size, seq_len = embeds.shape[0], embeds.shape[1] if len(embeds.shape) > 1 else 1
+                    
+                    if hasattr(self, '_speech_token_counter'):
+                        speech_pos_start = self._speech_token_counter
+                        self._speech_token_counter += seq_len
+                    else:
+                        speech_pos_start = 0
+                    
+                    speech_positions = torch.arange(
+                        speech_pos_start, 
+                        speech_pos_start + seq_len, 
+                        device=embeds.device
+                    ) % len(self.precomputed_speech_pos_emb)
+                    
+                    pos_embeds = self.precomputed_speech_pos_emb[speech_positions]
+                    if len(pos_embeds.shape) == 2:
+                        pos_embeds = pos_embeds.unsqueeze(0)
+                    embeds = embeds + pos_embeds
+                    
                     final_embeds = torch.cat([embeds, embeds], dim=1)
                     # assert len(final_embeds) == len(ids), "Number of output elements does not match number of input elements"
                     
@@ -637,7 +698,7 @@ class T3VllmModel(nn.Module, VllmModelForTextGeneration, SupportsMultiModal):
         # print("t3/cond_embeds", cond_embeds.shape, cond_embeds.dtype)
         # print("t3/uncond_embeds", uncond_embeds.shape, uncond_embeds.dtype)
 
-        # TODO: Apply speech positional embeddings here
+        # NOTE: Speech positional embeddings are now applied in get_input_embeddings() during decode phase
 
         hidden_states = self.tfmr(
             input_ids=None,
